@@ -199,107 +199,6 @@ export default function GenerationForm({
         </div>
       </div>
 
-      {/* Size Selection - Dropdown */}
-      <div>
-        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-          图像尺寸
-        </label>
-        <select
-          className="select-field"
-          value={sizeIndex}
-          onChange={(e) => setSizeIndex(Number(e.target.value))}
-        >
-          {SIZE_PRESETS.map((size, index) => (
-            <option key={index} value={index}>
-              {size.label} ({size.width}×{size.height})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Basic Parameters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-            采样步数: {steps}
-          </label>
-          <input
-            type="range"
-            min="20"
-            max="50"
-            value={steps}
-            onChange={(e) => setSteps(Number(e.target.value))}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-            CFG Scale: {cfg}
-          </label>
-          <input
-            type="range"
-            min="1"
-            max="20"
-            step="0.5"
-            value={cfg}
-            onChange={(e) => setCfg(Number(e.target.value))}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-            随机种子
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              className="input-field text-sm"
-              value={seed === -1 ? '' : seed}
-              placeholder="随机"
-              onChange={(e) => setSeed(e.target.value ? Number(e.target.value) : -1)}
-            />
-            <button
-              type="button"
-              className="btn-secondary text-sm px-3"
-              onClick={() => setSeed(-1)}
-              title="设为随机"
-            >
-              🎲
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Sampler and Scheduler */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-            采样器
-          </label>
-          <select
-            className="select-field"
-            value={sampler}
-            onChange={(e) => setSampler(e.target.value)}
-          >
-            {SAMPLERS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-            调度器
-          </label>
-          <select
-            className="select-field"
-            value={scheduler}
-            onChange={(e) => setScheduler(e.target.value)}
-          >
-            {SCHEDULERS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
       {/* Model Selection */}
       <div>
         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
@@ -366,7 +265,7 @@ export default function GenerationForm({
           onClick={() => setShowAdvanced(!showAdvanced)}
         >
           <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>
-            高级设置
+            参数设置
           </span>
           <svg
             className={`w-5 h-5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
@@ -379,16 +278,120 @@ export default function GenerationForm({
           </svg>
         </button>
         {showAdvanced && (
-          <div className="mt-4 p-4 rounded-xl" style={{ background: 'rgba(255, 107, 157, 0.03)' }}>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              负向提示词
-            </label>
-            <textarea
-              className="textarea-field text-sm"
-              value={negativePrompt}
-              onChange={(e) => setNegativePrompt(e.target.value)}
-              rows={3}
-            />
+          <div className="mt-4 p-4 rounded-xl space-y-5" style={{ background: 'rgba(255, 107, 157, 0.03)' }}>
+            {/* Size Selection */}
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                图像尺寸
+              </label>
+              <select
+                className="select-field"
+                value={sizeIndex}
+                onChange={(e) => setSizeIndex(Number(e.target.value))}
+              >
+                {SIZE_PRESETS.map((size, index) => (
+                  <option key={index} value={index}>
+                    {size.label} ({size.width}×{size.height})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Steps, CFG, Seed */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  采样步数: {steps}
+                </label>
+                <input
+                  type="range"
+                  min="20"
+                  max="50"
+                  value={steps}
+                  onChange={(e) => setSteps(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  CFG Scale: {cfg}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="20"
+                  step="0.5"
+                  value={cfg}
+                  onChange={(e) => setCfg(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  随机种子
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    className="input-field text-sm"
+                    value={seed === -1 ? '' : seed}
+                    placeholder="随机"
+                    onChange={(e) => setSeed(e.target.value ? Number(e.target.value) : -1)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary text-sm px-3"
+                    onClick={() => setSeed(-1)}
+                    title="设为随机"
+                  >
+                    🎲
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Sampler and Scheduler */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  采样器
+                </label>
+                <select
+                  className="select-field"
+                  value={sampler}
+                  onChange={(e) => setSampler(e.target.value)}
+                >
+                  {SAMPLERS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  调度器
+                </label>
+                <select
+                  className="select-field"
+                  value={scheduler}
+                  onChange={(e) => setScheduler(e.target.value)}
+                >
+                  {SCHEDULERS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Negative Prompt */}
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                负向提示词
+              </label>
+              <textarea
+                className="textarea-field text-sm"
+                value={negativePrompt}
+                onChange={(e) => setNegativePrompt(e.target.value)}
+                rows={3}
+              />
+            </div>
           </div>
         )}
       </div>

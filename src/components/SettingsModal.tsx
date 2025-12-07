@@ -14,10 +14,12 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [showApiKey, setShowApiKey] = useState(false);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setSettings(getSettings());
+      setImportError(null);
     }
   }, [isOpen]);
 
@@ -41,6 +43,41 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
 
   const handleChange = (key: keyof UserSettings, value: string) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Export settings as JSON file
+  const handleExport = () => {
+    const dataStr = JSON.stringify(settings, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'promptforge-settings.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Import settings from JSON file
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        // Validate required fields
+        if (typeof imported.llmApiUrl !== 'string' || typeof imported.comfyuiUrl !== 'string') {
+          throw new Error('配置文件格式不正确');
+        }
+        setSettings({ ...DEFAULT_SETTINGS, ...imported });
+        setImportError(null);
+      } catch {
+        setImportError('导入失败：配置文件格式不正确');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
   };
 
   if (!isOpen) return null;
@@ -176,34 +213,6 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
             </div>
           </section>
 
-          {/* Default Parameters Section */}
-          <section>
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              默认参数
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                  默认 Checkpoint 模型
-                </label>
-                <input
-                  type="text"
-                  className="input-field text-sm"
-                  placeholder="animagineXL.safetensors"
-                  value={settings.defaultModel}
-                  onChange={(e) => handleChange('defaultModel', e.target.value)}
-                />
-                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  ComfyUI 中的模型文件名
-                </p>
-              </div>
-            </div>
-          </section>
-
           {/* Workflow Template Section */}
           <section>
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
@@ -255,8 +264,42 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
           </section>
         </div>
 
+        {/* Import/Export */}
+        <div className="flex gap-2 mt-6">
+          <button
+            type="button"
+            onClick={handleExport}
+            className="flex-1 text-xs py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
+            style={{
+              background: 'rgba(255, 107, 157, 0.1)',
+              color: 'var(--color-primary)',
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            导出配置
+          </button>
+          <label
+            className="flex-1 text-xs py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+            style={{
+              background: 'rgba(255, 107, 157, 0.1)',
+              color: 'var(--color-primary)',
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            导入配置
+            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+          </label>
+        </div>
+        {importError && (
+          <p className="text-xs mt-2 text-center" style={{ color: '#dc2626' }}>{importError}</p>
+        )}
+
         {/* Actions */}
-        <div className="flex gap-3 mt-8">
+        <div className="flex gap-3 mt-4">
           <button onClick={onClose} className="btn-secondary flex-1">
             取消
           </button>

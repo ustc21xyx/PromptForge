@@ -9,9 +9,6 @@ export interface UserSettings {
   // ComfyUI Configuration
   comfyuiUrl: string;
   workflowTemplate: string;  // JSON string of workflow
-
-  // Default generation parameters
-  defaultModel: string;  // Checkpoint model
 }
 
 // Generation parameters persistence
@@ -83,7 +80,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   llmModel: 'deepseek-chat',
   comfyuiUrl: '',
   workflowTemplate: DEFAULT_WORKFLOW,
-  defaultModel: '',
 };
 
 export const DEFAULT_PREFS: GenerationPrefs = {

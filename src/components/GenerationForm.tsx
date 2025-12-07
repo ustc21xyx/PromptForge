@@ -36,14 +36,12 @@ const SCHEDULERS = [
 interface GenerationFormProps {
   onSubmit: (prompt: string, mode: GenerationMode, params: GenerationParams) => void;
   isLoading: boolean;
-  defaultModel?: string;
   comfyuiUrl?: string;
 }
 
 export default function GenerationForm({
   onSubmit,
   isLoading,
-  defaultModel = '',
   comfyuiUrl = '',
 }: GenerationFormProps) {
   const [prompt, setPrompt] = useState('');
@@ -52,7 +50,7 @@ export default function GenerationForm({
   const [steps, setSteps] = useState(DEFAULTS.steps);
   const [cfg, setCfg] = useState(DEFAULTS.cfg);
   const [seed, setSeed] = useState(DEFAULTS.seed);
-  const [model, setModel] = useState(defaultModel);
+  const [model, setModel] = useState('');
   const [sampler, setSampler] = useState(DEFAULTS.sampler);
   const [scheduler, setScheduler] = useState(DEFAULTS.scheduler);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -90,11 +88,6 @@ export default function GenerationForm({
     saveCurrentPrefs();
   }, [saveCurrentPrefs]);
 
-  // Update model when defaultModel prop changes
-  useEffect(() => {
-    if (defaultModel && !model) setModel(defaultModel);
-  }, [defaultModel, model]);
-
   // Fetch available models from ComfyUI
   const fetchModels = useCallback(async () => {
     if (!comfyuiUrl) {
@@ -120,17 +113,16 @@ export default function GenerationForm({
 
       setAvailableModels(data.checkpoints || []);
 
-      // If no model selected and we have models, select the first one or defaultModel
+      // If no model selected and we have models, select the first one
       if (!model && data.checkpoints?.length > 0) {
-        const defaultIdx = data.checkpoints.findIndex((m: string) => m === defaultModel);
-        setModel(defaultIdx >= 0 ? defaultModel : data.checkpoints[0]);
+        setModel(data.checkpoints[0]);
       }
     } catch (error) {
       setModelsError(error instanceof Error ? error.message : '获取模型列表失败');
     } finally {
       setModelsLoading(false);
     }
-  }, [comfyuiUrl, model, defaultModel]);
+  }, [comfyuiUrl, model]);
 
   // Auto-fetch models when comfyuiUrl is available
   useEffect(() => {
@@ -150,7 +142,7 @@ export default function GenerationForm({
       steps,
       cfg,
       seed,
-      model: model || defaultModel,
+      model,
       sampler,
       scheduler,
       negativePrompt,

@@ -300,20 +300,45 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Generation Form */}
-            <div className="glass-card-static p-5">
-              <GenerationForm
-                onSubmit={handleSubmit}
-                isLoading={isLoading}
-                defaultModel={settings.defaultModel}
-                comfyuiUrl={settings.comfyuiUrl}
-              />
+            <div className="space-y-4">
+              <div className="glass-card-static p-5">
+                <GenerationForm
+                  onSubmit={handleSubmit}
+                  isLoading={isLoading}
+                  defaultModel={settings.defaultModel}
+                  comfyuiUrl={settings.comfyuiUrl}
+                />
+              </div>
+
+              {/* Processed Prompt - Collapsible */}
+              {processedPrompt && (
+                <details className="glass-card-static p-3">
+                  <summary
+                    className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="var(--color-primary)" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    AI 处理后的提示词
+                  </summary>
+                  <p
+                    className="mt-2 text-xs leading-relaxed p-2 rounded-lg"
+                    style={{
+                      background: 'rgba(255, 107, 157, 0.03)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {processedPrompt}
+                  </p>
+                </details>
+              )}
             </div>
 
             {/* Generation Result */}
             <div className="lg:sticky lg:top-8 lg:self-start">
               <GenerationResult
                 status={status}
-                processedPrompt={processedPrompt}
                 imageUrl={imageUrl}
                 error={error}
               />

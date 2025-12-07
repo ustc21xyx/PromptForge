@@ -201,7 +201,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <header className="text-center mb-10 relative">
           <h1
@@ -298,7 +298,7 @@ export default function Home() {
             onSelectItem={handleSelectHistoryItem}
           />
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Generation Form */}
             <div className="glass-card p-6">
               <GenerationForm
@@ -310,12 +310,14 @@ export default function Home() {
             </div>
 
             {/* Generation Result */}
-            <GenerationResult
-              status={status}
-              processedPrompt={processedPrompt}
-              imageUrl={imageUrl}
-              error={error}
-            />
+            <div className="lg:sticky lg:top-8 lg:self-start">
+              <GenerationResult
+                status={status}
+                processedPrompt={processedPrompt}
+                imageUrl={imageUrl}
+                error={error}
+              />
+            </div>
           </div>
         )}
 

@@ -6,16 +6,25 @@ import { GenerationMode, GenerationParams, SIZE_PRESETS, DEFAULTS } from '@/type
 interface GenerationFormProps {
   onSubmit: (prompt: string, mode: GenerationMode, params: GenerationParams) => void;
   isLoading: boolean;
+  defaultModel?: string;
+  defaultSampler?: string;
+  defaultScheduler?: string;
 }
 
-export default function GenerationForm({ onSubmit, isLoading }: GenerationFormProps) {
+export default function GenerationForm({
+  onSubmit,
+  isLoading,
+  defaultModel = '',
+  defaultSampler = DEFAULTS.sampler,
+  defaultScheduler = DEFAULTS.scheduler,
+}: GenerationFormProps) {
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<GenerationMode>('enhance');
   const [sizeIndex, setSizeIndex] = useState(0);
   const [steps, setSteps] = useState(DEFAULTS.steps);
   const [cfg, setCfg] = useState(DEFAULTS.cfg);
   const [seed, setSeed] = useState(DEFAULTS.seed);
-  const [model, setModel] = useState('');
+  const [model, setModel] = useState(defaultModel);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState(DEFAULTS.negativePrompt);
 
@@ -30,7 +39,9 @@ export default function GenerationForm({ onSubmit, isLoading }: GenerationFormPr
       steps,
       cfg,
       seed,
-      model: model || undefined,
+      model: model || defaultModel,
+      sampler: defaultSampler,
+      scheduler: defaultScheduler,
       negativePrompt,
     });
   };
@@ -163,7 +174,7 @@ export default function GenerationForm({ onSubmit, isLoading }: GenerationFormPr
           onChange={(e) => setModel(e.target.value)}
         />
         <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-          留空则使用服务器默认模型
+          {defaultModel ? `默认: ${defaultModel}` : '请在设置中配置默认模型'}
         </p>
       </div>
 

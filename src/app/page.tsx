@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import GenerationForm from '@/components/GenerationForm';
 import GenerationResult from '@/components/GenerationResult';
 import HistoryPanel from '@/components/HistoryPanel';
+import SettingsModal from '@/components/SettingsModal';
 import { getHistory, addToHistory, updateHistoryItem } from '@/lib/history';
+import { getSettings, isSettingsConfigured, UserSettings, DEFAULT_SETTINGS } from '@/lib/settings';
 import {
   GenerationMode,
   GenerationParams,
@@ -21,17 +23,24 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
 
   const currentTaskRef = useRef<{ promptId: string; historyId: string } | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load history on mount
+  // Load settings and history on mount
   useEffect(() => {
+    setSettings(getSettings());
     setHistory(getHistory());
   }, []);
 
   const refreshHistory = useCallback(() => {
     setHistory(getHistory());
+  }, []);
+
+  const handleSettingsSave = useCallback((newSettings: UserSettings) => {
+    setSettings(newSettings);
   }, []);
 
   // Cleanup polling on unmount
@@ -43,9 +52,13 @@ export default function Home() {
     };
   }, []);
 
-  const pollStatus = useCallback(async (promptId: string, historyId: string) => {
+  const pollStatus = useCallback(async (promptId: string, historyId: string, comfyuiUrl: string) => {
     try {
-      const response = await fetch(`/api/status?prompt_id=${encodeURIComponent(promptId)}`);
+      const response = await fetch('/api/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt_id: promptId, comfyuiUrl }),
+      });
       const data: StatusResponse = await response.json();
 
       // Check if this is still the current task
@@ -68,7 +81,7 @@ export default function Home() {
           pollingIntervalRef.current = null;
         }
       } else if (data.status === 'error') {
-        setError(data.error || 'Generation failed');
+        setError(data.error || '生成失败');
         setIsLoading(false);
         updateHistoryItem(historyId, { status: 'error' });
         refreshHistory();
@@ -87,6 +100,13 @@ export default function Home() {
     mode: GenerationMode,
     params: GenerationParams
   ) => {
+    // Check if settings are configured
+    if (!isSettingsConfigured(settings)) {
+      setError('请先点击右上角设置按钮配置 API 信息');
+      setStatus('error');
+      return;
+    }
+
     // Clear previous state
     setIsLoading(true);
     setStatus('pending');
@@ -115,16 +135,26 @@ export default function Home() {
     refreshHistory();
 
     try {
-      // Submit generation request
+      // Submit generation request with config
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, mode, params }),
+        body: JSON.stringify({
+          prompt,
+          mode,
+          params,
+          config: {
+            llmApiUrl: settings.llmApiUrl,
+            llmApiKey: settings.llmApiKey,
+            llmModel: settings.llmModel,
+            comfyuiUrl: settings.comfyuiUrl,
+          },
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Generation request failed');
+        throw new Error(errorData.error || '请求失败');
       }
 
       const data: GenerateResponse = await response.json();
@@ -143,14 +173,14 @@ export default function Home() {
 
       // Start polling
       pollingIntervalRef.current = setInterval(() => {
-        pollStatus(data.prompt_id, historyId);
+        pollStatus(data.prompt_id, historyId, settings.comfyuiUrl);
       }, 2500);
 
       // Initial poll
-      pollStatus(data.prompt_id, historyId);
+      pollStatus(data.prompt_id, historyId, settings.comfyuiUrl);
     } catch (err) {
       console.error('Submit error:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : '未知错误');
       setStatus('error');
       setIsLoading(false);
       updateHistoryItem(historyId, { status: 'error' });
@@ -166,11 +196,13 @@ export default function Home() {
     setShowHistory(false);
   };
 
+  const isConfigured = isSettingsConfigured(settings);
+
   return (
     <main className="min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <header className="text-center mb-10">
+        <header className="text-center mb-10 relative">
           <h1
             className="text-4xl md:text-5xl font-bold mb-3"
             style={{
@@ -185,7 +217,61 @@ export default function Home() {
           <p style={{ color: 'var(--text-secondary)' }}>
             AI 驱动的图像生成工具 - 将你的想法变成精美图像
           </p>
+
+          {/* Settings Button */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="absolute top-0 right-0 w-10 h-10 rounded-full flex items-center justify-center transition-all"
+            style={{
+              background: isConfigured ? 'rgba(255, 107, 157, 0.1)' : 'rgba(248, 113, 113, 0.2)',
+              border: isConfigured ? '2px solid var(--border-soft)' : '2px solid rgba(248, 113, 113, 0.5)',
+            }}
+            title="设置"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke={isConfigured ? 'var(--color-primary)' : '#f87171'}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          </button>
         </header>
+
+        {/* Config Warning */}
+        {!isConfigured && (
+          <div
+            className="mb-6 p-4 rounded-xl flex items-center gap-3"
+            style={{
+              background: 'rgba(248, 113, 113, 0.1)',
+              border: '1px solid rgba(248, 113, 113, 0.3)',
+            }}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="#f87171" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <p className="text-sm" style={{ color: '#dc2626' }}>
+              请先点击右上角设置按钮配置 LLM API 和 ComfyUI 地址
+            </p>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6">
@@ -214,7 +300,13 @@ export default function Home() {
           <div className="space-y-6">
             {/* Generation Form */}
             <div className="glass-card p-6">
-              <GenerationForm onSubmit={handleSubmit} isLoading={isLoading} />
+              <GenerationForm
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
+                defaultModel={settings.defaultModel}
+                defaultSampler={settings.defaultSampler}
+                defaultScheduler={settings.defaultScheduler}
+              />
             </div>
 
             {/* Generation Result */}
@@ -234,6 +326,13 @@ export default function Home() {
           </p>
         </footer>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onSave={handleSettingsSave}
+      />
     </main>
   );
 }

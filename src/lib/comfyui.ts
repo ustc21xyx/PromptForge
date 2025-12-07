@@ -21,11 +21,12 @@ export interface ComfyUIHistoryResult {
   };
 }
 
-export async function submitToComfyUI(params: WorkflowParams): Promise<ComfyUISubmitResult> {
-  const comfyUrl = process.env.COMFYUI_URL;
-
+export async function submitToComfyUI(
+  params: WorkflowParams,
+  comfyUrl: string
+): Promise<ComfyUISubmitResult> {
   if (!comfyUrl) {
-    throw new Error('ComfyUI URL not configured');
+    throw new Error('ComfyUI URL 未配置，请在设置中配置');
   }
 
   const workflow = buildWorkflow(params);
@@ -40,21 +41,22 @@ export async function submitToComfyUI(params: WorkflowParams): Promise<ComfyUISu
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`ComfyUI submit error: ${error}`);
+    throw new Error(`ComfyUI 提交错误: ${error}`);
   }
 
   const data = await response.json();
   return { prompt_id: data.prompt_id };
 }
 
-export async function getComfyUIStatus(promptId: string): Promise<{
+export async function getComfyUIStatus(
+  promptId: string,
+  comfyUrl: string
+): Promise<{
   status: 'pending' | 'processing' | 'completed' | 'error';
   imageFilename?: string;
 }> {
-  const comfyUrl = process.env.COMFYUI_URL;
-
   if (!comfyUrl) {
-    throw new Error('ComfyUI URL not configured');
+    throw new Error('ComfyUI URL 未配置');
   }
 
   try {
@@ -94,7 +96,23 @@ export async function getComfyUIStatus(promptId: string): Promise<{
   }
 }
 
-export function getComfyUIImageUrl(filename: string): string {
-  const comfyUrl = process.env.COMFYUI_URL;
-  return `${comfyUrl}/view?filename=${encodeURIComponent(filename)}`;
+export async function fetchComfyUIImage(
+  filename: string,
+  comfyUrl: string
+): Promise<{ buffer: ArrayBuffer; contentType: string }> {
+  if (!comfyUrl) {
+    throw new Error('ComfyUI URL 未配置');
+  }
+
+  const imageUrl = `${comfyUrl}/view?filename=${encodeURIComponent(filename)}`;
+  const response = await fetch(imageUrl);
+
+  if (!response.ok) {
+    throw new Error('获取图片失败');
+  }
+
+  const buffer = await response.arrayBuffer();
+  const contentType = response.headers.get('content-type') || 'image/png';
+
+  return { buffer, contentType };
 }

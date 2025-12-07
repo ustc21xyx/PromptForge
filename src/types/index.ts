@@ -14,11 +14,30 @@ export interface GenerationParams {
   negativePrompt?: string;
 }
 
+// API configuration (from user settings)
+export interface ApiConfig {
+  llmApiUrl: string;
+  llmApiKey: string;
+  llmModel: string;
+  comfyuiUrl: string;
+}
+
 // API request/response types
 export interface GenerateRequest {
   prompt: string;
   mode: GenerationMode;
   params: GenerationParams;
+  config: ApiConfig;
+}
+
+export interface StatusRequest {
+  prompt_id: string;
+  comfyuiUrl: string;
+}
+
+export interface ImageRequest {
+  filename: string;
+  comfyuiUrl: string;
 }
 
 export interface GenerateResponse {

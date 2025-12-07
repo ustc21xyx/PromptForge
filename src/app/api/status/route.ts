@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getComfyUIStatus } from '@/lib/comfyui';
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const promptId = searchParams.get('prompt_id');
+    const body = await request.json();
+    const { prompt_id, comfyuiUrl } = body;
 
-    if (!promptId) {
+    if (!prompt_id) {
       return NextResponse.json(
-        { error: 'Missing prompt_id parameter' },
+        { error: '缺少 prompt_id 参数' },
         { status: 400 }
       );
     }
 
-    const result = await getComfyUIStatus(promptId);
+    if (!comfyuiUrl) {
+      return NextResponse.json(
+        { error: '缺少 comfyuiUrl 参数' },
+        { status: 400 }
+      );
+    }
+
+    const result = await getComfyUIStatus(prompt_id, comfyuiUrl);
 
     const response: {
       status: string;
@@ -32,11 +39,11 @@ export async function GET(request: NextRequest) {
     } else if (result.status === 'completed') {
       response.progress = 100;
       if (result.imageFilename) {
-        // Return the proxy URL instead of direct ComfyUI URL
-        response.image_url = `/api/image?filename=${encodeURIComponent(result.imageFilename)}`;
+        // Return the proxy URL with filename and comfyuiUrl as query params
+        response.image_url = `/api/image?filename=${encodeURIComponent(result.imageFilename)}&url=${encodeURIComponent(comfyuiUrl)}`;
       }
     } else if (result.status === 'error') {
-      response.error = 'Generation failed';
+      response.error = '生成失败';
     }
 
     return NextResponse.json(response);
@@ -45,7 +52,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : '未知错误'
       },
       { status: 500 }
     );

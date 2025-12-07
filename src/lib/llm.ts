@@ -22,16 +22,21 @@ Output only the enhanced prompt, nothing else.`,
 Output only the creative prompt, nothing else.`,
 };
 
+export interface LLMConfig {
+  apiUrl: string;
+  apiKey: string;
+  model: string;
+}
+
 export async function processPrompt(
   userPrompt: string,
-  mode: GenerationMode
+  mode: GenerationMode,
+  config: LLMConfig
 ): Promise<string> {
-  const apiUrl = process.env.LLM_API_URL;
-  const apiKey = process.env.LLM_API_KEY;
-  const model = process.env.LLM_MODEL || 'deepseek-chat';
+  const { apiUrl, apiKey, model } = config;
 
   if (!apiUrl || !apiKey) {
-    throw new Error('LLM API configuration missing');
+    throw new Error('LLM API 配置缺失，请在设置中配置');
   }
 
   const response = await fetch(`${apiUrl}/chat/completions`, {
@@ -41,7 +46,7 @@ export async function processPrompt(
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model,
+      model: model || 'deepseek-chat',
       messages: [
         { role: 'system', content: SYSTEM_PROMPTS[mode] },
         { role: 'user', content: userPrompt },
@@ -53,7 +58,7 @@ export async function processPrompt(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`LLM API error: ${error}`);
+    throw new Error(`LLM API 错误: ${error}`);
   }
 
   const data = await response.json();

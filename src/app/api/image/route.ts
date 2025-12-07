@@ -1,42 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchComfyUIImage } from '@/lib/comfyui';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const filename = searchParams.get('filename');
+    const comfyUrl = searchParams.get('url');
 
     if (!filename) {
       return NextResponse.json(
-        { error: 'Missing filename parameter' },
+        { error: '缺少 filename 参数' },
         { status: 400 }
       );
     }
 
-    const comfyUrl = process.env.COMFYUI_URL;
     if (!comfyUrl) {
       return NextResponse.json(
-        { error: 'ComfyUI URL not configured' },
-        { status: 500 }
+        { error: '缺少 url 参数' },
+        { status: 400 }
       );
     }
 
     // Fetch image from ComfyUI
-    const imageUrl = `${comfyUrl}/view?filename=${encodeURIComponent(filename)}`;
-    const response = await fetch(imageUrl);
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Failed to fetch image from ComfyUI' },
-        { status: response.status }
-      );
-    }
-
-    // Get the image data
-    const imageBuffer = await response.arrayBuffer();
-    const contentType = response.headers.get('content-type') || 'image/png';
+    const { buffer, contentType } = await fetchComfyUIImage(filename, comfyUrl);
 
     // Return the image with proper headers
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(buffer, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
@@ -45,7 +34,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Image proxy error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? error.message : '未知错误' },
       { status: 500 }
     );
   }

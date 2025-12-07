@@ -164,10 +164,10 @@ export default function GenerationForm({
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Prompt Input */}
       <div>
-        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
           描述你想要的图像
         </label>
         <textarea
@@ -175,25 +175,25 @@ export default function GenerationForm({
           placeholder="例如：一个穿着白色连衣裙的少女站在樱花树下，阳光透过花瓣洒落..."
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          rows={4}
+          rows={3}
         />
       </div>
 
-      {/* Mode Selection */}
+      {/* Mode Selection - Compact */}
       <div>
-        <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>
+        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
           处理模式
         </label>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex gap-2">
           {modes.map((m) => (
             <button
               key={m.key}
               type="button"
-              className={`mode-btn flex-1 min-w-[100px] ${mode === m.key ? 'active' : ''}`}
+              className={`mode-btn-compact flex-1 ${mode === m.key ? 'active' : ''}`}
               onClick={() => setMode(m.key)}
+              title={m.desc}
             >
-              <div className="font-semibold">{m.label}</div>
-              <div className="text-xs mt-1 opacity-80">{m.desc}</div>
+              {m.label}
             </button>
           ))}
         </div>
@@ -201,7 +201,7 @@ export default function GenerationForm({
 
       {/* Model Selection */}
       <div>
-        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
           Checkpoint 模型
         </label>
         <div className="flex gap-2">
@@ -400,11 +400,11 @@ export default function GenerationForm({
       <button
         type="submit"
         disabled={!prompt.trim() || isLoading}
-        className="btn-primary w-full text-lg py-4"
+        className="btn-primary w-full py-3"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
               <circle
                 className="opacity-25"
                 cx="12"
@@ -423,7 +423,7 @@ export default function GenerationForm({
             生成中...
           </span>
         ) : (
-          '✨ 开始生成'
+          '开始生成'
         )}
       </button>
     </form>

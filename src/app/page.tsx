@@ -300,7 +300,7 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Generation Form */}
-            <div className="glass-card p-6">
+            <div className="glass-card-static p-5">
               <GenerationForm
                 onSubmit={handleSubmit}
                 isLoading={isLoading}

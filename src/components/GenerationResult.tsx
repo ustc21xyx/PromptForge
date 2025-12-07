@@ -13,7 +13,43 @@ export default function GenerationResult({
   imageUrl,
   error,
 }: GenerationResultProps) {
-  if (!status && !processedPrompt) return null;
+  // Show placeholder when no generation is in progress
+  if (!status && !processedPrompt) {
+    return (
+      <div
+        className="glass-card p-8 flex flex-col items-center justify-center text-center"
+        style={{ minHeight: '320px' }}
+      >
+        <div
+          className="w-24 h-24 rounded-full flex items-center justify-center mb-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 107, 157, 0.1) 0%, rgba(255, 179, 71, 0.1) 100%)',
+          }}
+        >
+          <svg
+            className="w-12 h-12"
+            fill="none"
+            stroke="var(--color-primary)"
+            viewBox="0 0 24 24"
+            style={{ opacity: 0.6 }}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        </div>
+        <p className="text-lg font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+          等待创作
+        </p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          输入描述后点击生成，图片将显示在这里
+        </p>
+      </div>
+    );
+  }
 
   const statusLabels = {
     pending: '排队中...',

@@ -1,0 +1,71 @@
+// Generation modes
+export type GenerationMode = 'translate' | 'enhance' | 'creative';
+
+// Image generation parameters
+export interface GenerationParams {
+  width: number;
+  height: number;
+  steps: number;
+  cfg: number;
+  seed: number;
+  sampler?: string;
+  scheduler?: string;
+  model?: string;
+  negativePrompt?: string;
+}
+
+// API request/response types
+export interface GenerateRequest {
+  prompt: string;
+  mode: GenerationMode;
+  params: GenerationParams;
+}
+
+export interface GenerateResponse {
+  prompt_id: string;
+  processed_prompt: string;
+}
+
+export interface StatusResponse {
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  progress?: number;
+  image_url?: string;
+  error?: string;
+}
+
+// History item
+export interface HistoryItem {
+  id: string;
+  timestamp: number;
+  originalPrompt: string;
+  processedPrompt: string;
+  mode: GenerationMode;
+  params: GenerationParams;
+  imageUrl?: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+}
+
+// Preset sizes
+export interface SizePreset {
+  label: string;
+  width: number;
+  height: number;
+}
+
+export const SIZE_PRESETS: SizePreset[] = [
+  { label: '1:1 方形', width: 1024, height: 1024 },
+  { label: '3:2 横向', width: 1216, height: 832 },
+  { label: '2:3 纵向', width: 832, height: 1216 },
+  { label: '16:9 宽屏', width: 1344, height: 768 },
+  { label: '9:16 竖屏', width: 768, height: 1344 },
+];
+
+// Default values
+export const DEFAULTS = {
+  steps: 30,
+  cfg: 7,
+  seed: -1,
+  sampler: 'euler',
+  scheduler: 'normal',
+  negativePrompt: 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry',
+};

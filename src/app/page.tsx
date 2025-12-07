@@ -305,6 +305,7 @@ export default function Home() {
                 onSubmit={handleSubmit}
                 isLoading={isLoading}
                 defaultModel={settings.defaultModel}
+                comfyuiUrl={settings.comfyuiUrl}
               />
             </div>
 

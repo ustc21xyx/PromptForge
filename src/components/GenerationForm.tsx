@@ -37,12 +37,14 @@ interface GenerationFormProps {
   onSubmit: (prompt: string, mode: GenerationMode, params: GenerationParams) => void;
   isLoading: boolean;
   defaultModel?: string;
+  comfyuiUrl?: string;
 }
 
 export default function GenerationForm({
   onSubmit,
   isLoading,
   defaultModel = '',
+  comfyuiUrl = '',
 }: GenerationFormProps) {
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<GenerationMode>('enhance');
@@ -56,6 +58,9 @@ export default function GenerationForm({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState(DEFAULTS.negativePrompt);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
   // Load preferences on mount
   useEffect(() => {
@@ -89,6 +94,50 @@ export default function GenerationForm({
   useEffect(() => {
     if (defaultModel && !model) setModel(defaultModel);
   }, [defaultModel, model]);
+
+  // Fetch available models from ComfyUI
+  const fetchModels = useCallback(async () => {
+    if (!comfyuiUrl) {
+      setModelsError('请先配置 ComfyUI URL');
+      return;
+    }
+
+    setModelsLoading(true);
+    setModelsError(null);
+
+    try {
+      const response = await fetch('/api/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comfyuiUrl }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '获取模型列表失败');
+      }
+
+      setAvailableModels(data.checkpoints || []);
+
+      // If no model selected and we have models, select the first one or defaultModel
+      if (!model && data.checkpoints?.length > 0) {
+        const defaultIdx = data.checkpoints.findIndex((m: string) => m === defaultModel);
+        setModel(defaultIdx >= 0 ? defaultModel : data.checkpoints[0]);
+      }
+    } catch (error) {
+      setModelsError(error instanceof Error ? error.message : '获取模型列表失败');
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [comfyuiUrl, model, defaultModel]);
+
+  // Auto-fetch models when comfyuiUrl is available
+  useEffect(() => {
+    if (comfyuiUrl && availableModels.length === 0) {
+      fetchModels();
+    }
+  }, [comfyuiUrl, availableModels.length, fetchModels]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,16 +305,57 @@ export default function GenerationForm({
         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
           Checkpoint 模型
         </label>
-        <input
-          type="text"
-          className="input-field"
-          placeholder="例如：animagineXL.safetensors"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-        />
-        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-          {defaultModel ? `默认: ${defaultModel}` : '请在设置中配置默认模型'}
-        </p>
+        <div className="flex gap-2">
+          {availableModels.length > 0 ? (
+            <select
+              className="select-field flex-1"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+            >
+              {availableModels.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              className="input-field flex-1"
+              placeholder="例如：animagineXL.safetensors"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+            />
+          )}
+          <button
+            type="button"
+            className="btn-secondary px-3"
+            onClick={fetchModels}
+            disabled={modelsLoading || !comfyuiUrl}
+            title="刷新模型列表"
+          >
+            {modelsLoading ? (
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            )}
+          </button>
+        </div>
+        {modelsError && (
+          <p className="text-xs mt-1" style={{ color: '#dc2626' }}>{modelsError}</p>
+        )}
+        {!modelsError && (
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+            {availableModels.length > 0
+              ? `已加载 ${availableModels.length} 个模型`
+              : comfyuiUrl
+                ? '点击刷新按钮获取模型列表'
+                : '请先配置 ComfyUI URL'}
+          </p>
+        )}
       </div>
 
       {/* Advanced Settings (Collapsible) */}

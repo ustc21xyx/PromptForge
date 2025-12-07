@@ -79,10 +79,10 @@ export const SIZE_PRESETS: SizePreset[] = [
   { label: '2:3 纵向', width: 832, height: 1216 },
   { label: '16:9 宽屏', width: 1344, height: 768 },
   { label: '9:16 竖屏', width: 768, height: 1344 },
-  // ChatGPT/DALL-E 风格尺寸
+  // ChatGPT 风格尺寸 (3:2)
   { label: '1:1 小', width: 512, height: 512 },
-  { label: '横向 (DALL-E)', width: 1792, height: 1024 },
-  { label: '纵向 (DALL-E)', width: 1024, height: 1792 },
+  { label: '3:2 横向 (ChatGPT)', width: 1536, height: 1024 },
+  { label: '2:3 纵向 (ChatGPT)', width: 1024, height: 1536 },
   // 常见屏幕尺寸
   { label: '1080p 横屏', width: 1920, height: 1080 },
   { label: '1080p 竖屏', width: 1080, height: 1920 },

@@ -36,16 +36,12 @@ interface GenerationFormProps {
   onSubmit: (prompt: string, mode: GenerationMode, params: GenerationParams) => void;
   isLoading: boolean;
   defaultModel?: string;
-  defaultSampler?: string;
-  defaultScheduler?: string;
 }
 
 export default function GenerationForm({
   onSubmit,
   isLoading,
   defaultModel = '',
-  defaultSampler = DEFAULTS.sampler,
-  defaultScheduler = DEFAULTS.scheduler,
 }: GenerationFormProps) {
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<GenerationMode>('enhance');
@@ -54,23 +50,15 @@ export default function GenerationForm({
   const [cfg, setCfg] = useState(DEFAULTS.cfg);
   const [seed, setSeed] = useState(DEFAULTS.seed);
   const [model, setModel] = useState(defaultModel);
-  const [sampler, setSampler] = useState(defaultSampler);
-  const [scheduler, setScheduler] = useState(defaultScheduler);
+  const [sampler, setSampler] = useState(DEFAULTS.sampler);
+  const [scheduler, setScheduler] = useState(DEFAULTS.scheduler);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState(DEFAULTS.negativePrompt);
 
-  // Update defaults when props change
+  // Update model when defaultModel prop changes
   useEffect(() => {
     if (defaultModel && !model) setModel(defaultModel);
   }, [defaultModel, model]);
-
-  useEffect(() => {
-    setSampler(defaultSampler);
-  }, [defaultSampler]);
-
-  useEffect(() => {
-    setScheduler(defaultScheduler);
-  }, [defaultScheduler]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,26 +120,22 @@ export default function GenerationForm({
         </div>
       </div>
 
-      {/* Size Selection */}
+      {/* Size Selection - Dropdown */}
       <div>
         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
           图像尺寸
         </label>
-        <div className="flex flex-wrap gap-2">
+        <select
+          className="select-field"
+          value={sizeIndex}
+          onChange={(e) => setSizeIndex(Number(e.target.value))}
+        >
           {SIZE_PRESETS.map((size, index) => (
-            <button
-              key={index}
-              type="button"
-              className={`mode-btn text-sm py-2 px-4 ${sizeIndex === index ? 'active' : ''}`}
-              onClick={() => setSizeIndex(index)}
-            >
-              {size.label}
-              <span className="text-xs ml-1 opacity-70">
-                ({size.width}×{size.height})
-              </span>
-            </button>
+            <option key={index} value={index}>
+              {size.label} ({size.width}×{size.height})
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* Basic Parameters */}

@@ -304,8 +304,6 @@ export default function Home() {
                 onSubmit={handleSubmit}
                 isLoading={isLoading}
                 defaultModel={settings.defaultModel}
-                defaultSampler={settings.defaultSampler}
-                defaultScheduler={settings.defaultScheduler}
               />
             </div>
 

@@ -183,32 +183,9 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
                   value={settings.defaultModel}
                   onChange={(e) => handleChange('defaultModel', e.target.value)}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                    采样器
-                  </label>
-                  <input
-                    type="text"
-                    className="input-field text-sm"
-                    placeholder="euler"
-                    value={settings.defaultSampler}
-                    onChange={(e) => handleChange('defaultSampler', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                    调度器
-                  </label>
-                  <input
-                    type="text"
-                    className="input-field text-sm"
-                    placeholder="normal"
-                    value={settings.defaultScheduler}
-                    onChange={(e) => handleChange('defaultScheduler', e.target.value)}
-                  />
-                </div>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  ComfyUI 中的模型文件名
+                </p>
               </div>
             </div>
           </section>

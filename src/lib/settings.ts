@@ -11,8 +11,6 @@ export interface UserSettings {
 
   // Default generation parameters
   defaultModel: string;  // Checkpoint model
-  defaultSampler: string;
-  defaultScheduler: string;
 }
 
 const SETTINGS_KEY = 'promptforge_settings';
@@ -23,8 +21,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   llmModel: 'deepseek-chat',
   comfyuiUrl: '',
   defaultModel: '',
-  defaultSampler: 'euler',
-  defaultScheduler: 'normal',
 };
 
 export function getSettings(): UserSettings {

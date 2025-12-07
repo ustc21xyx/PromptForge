@@ -148,6 +148,7 @@ export default function Home() {
             llmApiKey: settings.llmApiKey,
             llmModel: settings.llmModel,
             comfyuiUrl: settings.comfyuiUrl,
+            workflowTemplate: settings.workflowTemplate,
           },
         }),
       });

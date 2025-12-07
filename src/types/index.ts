@@ -20,6 +20,7 @@ export interface ApiConfig {
   llmApiKey: string;
   llmModel: string;
   comfyuiUrl: string;
+  workflowTemplate: string;
 }
 
 // API request/response types

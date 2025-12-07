@@ -1,54 +1,4 @@
-// ComfyUI Workflow Template
-// This template will have placeholders replaced at runtime
-export const WORKFLOW_TEMPLATE = {
-  "3": {
-    "inputs": {
-      "seed": "%seed%",
-      "steps": "%steps%",
-      "cfg": "%scale%",
-      "sampler_name": "%sampler%",
-      "scheduler": "%scheduler%",
-      "denoise": 1,
-      "model": ["10", 0],
-      "positive": ["6", 0],
-      "negative": ["7", 0],
-      "latent_image": ["5", 0]
-    },
-    "class_type": "KSampler"
-  },
-  "4": {
-    "inputs": { "ckpt_name": "%model%" },
-    "class_type": "CheckpointLoaderSimple"
-  },
-  "5": {
-    "inputs": { "width": "%width%", "height": "%height%", "batch_size": 1 },
-    "class_type": "EmptyLatentImage"
-  },
-  "6": {
-    "inputs": { "text": "%prompt%", "clip": ["10", 1] },
-    "class_type": "CLIPTextEncode"
-  },
-  "7": {
-    "inputs": { "text": "%negative_prompt%", "clip": ["4", 1] },
-    "class_type": "CLIPTextEncode"
-  },
-  "8": {
-    "inputs": { "samples": ["3", 0], "vae": ["4", 2] },
-    "class_type": "VAEDecode"
-  },
-  "9": {
-    "inputs": { "filename_prefix": "ComfyUI", "images": ["8", 0] },
-    "class_type": "SaveImage"
-  },
-  "10": {
-    "inputs": {
-      "text": "<lora:748cmSDXL:0.5> <lora:AIイラストおじさん (2):0.5> <lora:【CRMS】_v0.2:0.5>",
-      "model": ["4", 0],
-      "clip": ["4", 1]
-    },
-    "class_type": "Lora Loader (LoraManager)"
-  }
-};
+// ComfyUI Workflow Template utilities
 
 export interface WorkflowParams {
   prompt: string;
@@ -63,16 +13,14 @@ export interface WorkflowParams {
   model: string;
 }
 
-export function buildWorkflow(params: WorkflowParams): object {
+export function buildWorkflow(templateJson: string, params: WorkflowParams): object {
   const { prompt, negativePrompt, seed, steps, cfg, width, height, sampler, scheduler, model } = params;
 
   // Generate random seed if -1
   const actualSeed = seed === -1 ? Math.floor(Math.random() * 1e15) : seed;
 
-  // Convert template to string, replace placeholders, then parse back
-  let workflowStr = JSON.stringify(WORKFLOW_TEMPLATE);
-
-  workflowStr = workflowStr
+  // Replace placeholders in template
+  let workflowStr = templateJson
     .replace('"%prompt%"', JSON.stringify(prompt))
     .replace('"%negative_prompt%"', JSON.stringify(negativePrompt))
     .replace('"%seed%"', String(actualSeed))
@@ -85,4 +33,16 @@ export function buildWorkflow(params: WorkflowParams): object {
     .replace('"%model%"', JSON.stringify(model));
 
   return JSON.parse(workflowStr);
+}
+
+export function validateWorkflowTemplate(templateJson: string): { valid: boolean; error?: string } {
+  try {
+    const parsed = JSON.parse(templateJson);
+    if (typeof parsed !== 'object' || parsed === null) {
+      return { valid: false, error: '模板必须是 JSON 对象' };
+    }
+    return { valid: true };
+  } catch (e) {
+    return { valid: false, error: `JSON 解析错误: ${e instanceof Error ? e.message : '未知错误'}` };
+  }
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { GenerationMode, GenerationParams, SIZE_PRESETS, DEFAULTS } from '@/types';
+import { getPrefs, savePrefs, GenerationPrefs } from '@/lib/settings';
 
 // Common samplers for Stable Diffusion
 const SAMPLERS = [
@@ -54,6 +55,35 @@ export default function GenerationForm({
   const [scheduler, setScheduler] = useState(DEFAULTS.scheduler);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState(DEFAULTS.negativePrompt);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
+  // Load preferences on mount
+  useEffect(() => {
+    const prefs = getPrefs();
+    setSizeIndex(prefs.sizeIndex);
+    setSampler(prefs.sampler);
+    setScheduler(prefs.scheduler);
+    setSteps(prefs.steps);
+    setCfg(prefs.cfg);
+    setPrefsLoaded(true);
+  }, []);
+
+  // Save preferences when they change
+  const saveCurrentPrefs = useCallback(() => {
+    if (!prefsLoaded) return;
+    const prefs: GenerationPrefs = {
+      sizeIndex,
+      sampler,
+      scheduler,
+      steps,
+      cfg,
+    };
+    savePrefs(prefs);
+  }, [prefsLoaded, sizeIndex, sampler, scheduler, steps, cfg]);
+
+  useEffect(() => {
+    saveCurrentPrefs();
+  }, [saveCurrentPrefs]);
 
   // Update model when defaultModel prop changes
   useEffect(() => {

@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!config?.llmApiUrl || !config?.llmApiKey || !config?.comfyuiUrl) {
+    if (!config?.llmApiUrl || !config?.llmApiKey || !config?.comfyuiUrl || !config?.workflowTemplate) {
       return NextResponse.json(
-        { error: '请先在设置中配置 LLM API 和 ComfyUI URL' },
+        { error: '请先在设置中配置 LLM API、ComfyUI URL 和 Workflow 模板' },
         { status: 400 }
       );
     }
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await submitToComfyUI(workflowParams, config.comfyuiUrl);
+    const result = await submitToComfyUI(workflowParams, config.comfyuiUrl, config.workflowTemplate);
 
     return NextResponse.json({
       prompt_id: result.prompt_id,

@@ -23,13 +23,18 @@ export interface ComfyUIHistoryResult {
 
 export async function submitToComfyUI(
   params: WorkflowParams,
-  comfyUrl: string
+  comfyUrl: string,
+  workflowTemplate: string
 ): Promise<ComfyUISubmitResult> {
   if (!comfyUrl) {
     throw new Error('ComfyUI URL 未配置，请在设置中配置');
   }
 
-  const workflow = buildWorkflow(params);
+  if (!workflowTemplate) {
+    throw new Error('Workflow 模板未配置，请在设置中配置');
+  }
+
+  const workflow = buildWorkflow(workflowTemplate, params);
 
   const response = await fetch(`${comfyUrl}/prompt`, {
     method: 'POST',
@@ -77,14 +82,16 @@ export async function getComfyUIStatus(
 
     // Check if outputs exist and have images
     if (historyItem.outputs) {
-      // Look for the SaveImage node (node 9 in our template)
-      const saveImageOutput = historyItem.outputs['9'];
-      if (saveImageOutput?.images?.length) {
-        const image = saveImageOutput.images[0];
-        return {
-          status: 'completed',
-          imageFilename: image.filename,
-        };
+      // Look for SaveImage nodes - check common node IDs
+      for (const nodeId of Object.keys(historyItem.outputs)) {
+        const nodeOutput = historyItem.outputs[nodeId];
+        if (nodeOutput?.images?.length) {
+          const image = nodeOutput.images[0];
+          return {
+            status: 'completed',
+            imageFilename: image.filename,
+          };
+        }
       }
     }
 

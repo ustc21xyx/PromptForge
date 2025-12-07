@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserSettings, getSettings, saveSettings, DEFAULT_SETTINGS } from '@/lib/settings';
+import { UserSettings, getSettings, saveSettings, DEFAULT_SETTINGS, DEFAULT_WORKFLOW } from '@/lib/settings';
+import { validateWorkflowTemplate } from '@/lib/workflow-template';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModalProps) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -20,9 +22,21 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
   }, [isOpen]);
 
   const handleSave = () => {
+    // Validate workflow template
+    const validation = validateWorkflowTemplate(settings.workflowTemplate);
+    if (!validation.valid) {
+      setWorkflowError(validation.error || 'Workflow 模板无效');
+      return;
+    }
+    setWorkflowError(null);
     saveSettings(settings);
     onSave(settings);
     onClose();
+  };
+
+  const handleResetWorkflow = () => {
+    setSettings(prev => ({ ...prev, workflowTemplate: DEFAULT_WORKFLOW }));
+    setWorkflowError(null);
   };
 
   const handleChange = (key: keyof UserSettings, value: string) => {
@@ -186,6 +200,56 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                   ComfyUI 中的模型文件名
                 </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Workflow Template Section */}
+          <section>
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+              Workflow 模板
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    ComfyUI API 格式 JSON
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleResetWorkflow}
+                    className="text-xs px-2 py-1 rounded transition-colors"
+                    style={{
+                      background: 'rgba(255, 107, 157, 0.1)',
+                      color: 'var(--color-primary)',
+                    }}
+                  >
+                    重置默认
+                  </button>
+                </div>
+                <textarea
+                  className="input-field text-xs font-mono"
+                  style={{ minHeight: '200px', lineHeight: '1.4' }}
+                  value={settings.workflowTemplate}
+                  onChange={(e) => {
+                    handleChange('workflowTemplate', e.target.value);
+                    setWorkflowError(null);
+                  }}
+                  spellCheck={false}
+                />
+                {workflowError && (
+                  <p className="text-xs mt-1" style={{ color: '#dc2626' }}>
+                    {workflowError}
+                  </p>
+                )}
+                <div className="text-xs mt-2 space-y-1" style={{ color: 'var(--text-muted)' }}>
+                  <p>支持的占位符:</p>
+                  <p className="font-mono">%prompt% %negative_prompt% %seed% %steps% %scale%</p>
+                  <p className="font-mono">%width% %height% %sampler% %scheduler% %model%</p>
+                </div>
               </div>
             </div>
           </section>

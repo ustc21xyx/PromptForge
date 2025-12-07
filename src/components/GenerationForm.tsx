@@ -1,7 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GenerationMode, GenerationParams, SIZE_PRESETS, DEFAULTS } from '@/types';
+
+// Common samplers for Stable Diffusion
+const SAMPLERS = [
+  'euler',
+  'euler_ancestral',
+  'heun',
+  'dpm_2',
+  'dpm_2_ancestral',
+  'lms',
+  'dpm_fast',
+  'dpm_adaptive',
+  'dpmpp_2s_ancestral',
+  'dpmpp_sde',
+  'dpmpp_2m',
+  'dpmpp_2m_sde',
+  'dpmpp_3m_sde',
+  'ddim',
+  'uni_pc',
+];
+
+// Common schedulers
+const SCHEDULERS = [
+  'normal',
+  'karras',
+  'exponential',
+  'sgm_uniform',
+  'simple',
+  'ddim_uniform',
+];
 
 interface GenerationFormProps {
   onSubmit: (prompt: string, mode: GenerationMode, params: GenerationParams) => void;
@@ -25,8 +54,23 @@ export default function GenerationForm({
   const [cfg, setCfg] = useState(DEFAULTS.cfg);
   const [seed, setSeed] = useState(DEFAULTS.seed);
   const [model, setModel] = useState(defaultModel);
+  const [sampler, setSampler] = useState(defaultSampler);
+  const [scheduler, setScheduler] = useState(defaultScheduler);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState(DEFAULTS.negativePrompt);
+
+  // Update defaults when props change
+  useEffect(() => {
+    if (defaultModel && !model) setModel(defaultModel);
+  }, [defaultModel, model]);
+
+  useEffect(() => {
+    setSampler(defaultSampler);
+  }, [defaultSampler]);
+
+  useEffect(() => {
+    setScheduler(defaultScheduler);
+  }, [defaultScheduler]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +84,8 @@ export default function GenerationForm({
       cfg,
       seed,
       model: model || defaultModel,
-      sampler: defaultSampler,
-      scheduler: defaultScheduler,
+      sampler,
+      scheduler,
       negativePrompt,
     });
   };
@@ -158,6 +202,38 @@ export default function GenerationForm({
               🎲
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Sampler and Scheduler */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+            采样器
+          </label>
+          <select
+            className="select-field"
+            value={sampler}
+            onChange={(e) => setSampler(e.target.value)}
+          >
+            {SAMPLERS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+            调度器
+          </label>
+          <select
+            className="select-field"
+            value={scheduler}
+            onChange={(e) => setScheduler(e.target.value)}
+          >
+            {SCHEDULERS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
       </div>
 

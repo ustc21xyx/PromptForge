@@ -19,6 +19,7 @@ export interface ApiConfig {
   llmApiUrl: string;
   llmApiKey: string;
   llmModel: string;
+  llmApiFormat?: 'openai' | 'gemini';
   comfyuiUrl: string;
   workflowTemplate: string;
 }

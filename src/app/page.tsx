@@ -147,6 +147,7 @@ export default function Home() {
             llmApiUrl: settings.llmApiUrl,
             llmApiKey: settings.llmApiKey,
             llmModel: settings.llmModel,
+            llmApiFormat: settings.llmApiFormat,
             comfyuiUrl: settings.comfyuiUrl,
             workflowTemplate: settings.workflowTemplate,
           },

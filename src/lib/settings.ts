@@ -1,10 +1,13 @@
 // User settings stored in localStorage
 
+export type LLMApiFormat = 'openai' | 'gemini';
+
 export interface UserSettings {
   // LLM Configuration
   llmApiUrl: string;
   llmApiKey: string;
   llmModel: string;
+  llmApiFormat: LLMApiFormat;
 
   // ComfyUI Configuration
   comfyuiUrl: string;
@@ -78,6 +81,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   llmApiUrl: 'https://api.deepseek.com/v1',
   llmApiKey: '',
   llmModel: 'deepseek-chat',
+  llmApiFormat: 'openai',
   comfyuiUrl: '',
   workflowTemplate: DEFAULT_WORKFLOW,
 };

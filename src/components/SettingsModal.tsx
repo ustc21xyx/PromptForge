@@ -130,15 +130,59 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
             <div className="space-y-3">
               <div>
                 <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  API 格式
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleChange('llmApiFormat', 'openai')}
+                    className={`flex-1 text-sm py-2 px-3 rounded-lg transition-colors ${
+                      settings.llmApiFormat === 'openai' ? 'text-white' : ''
+                    }`}
+                    style={{
+                      background: settings.llmApiFormat === 'openai'
+                        ? 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)'
+                        : 'rgba(255, 107, 157, 0.1)',
+                      color: settings.llmApiFormat === 'openai' ? 'white' : 'var(--color-primary)',
+                    }}
+                  >
+                    OpenAI 兼容
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleChange('llmApiFormat', 'gemini')}
+                    className={`flex-1 text-sm py-2 px-3 rounded-lg transition-colors ${
+                      settings.llmApiFormat === 'gemini' ? 'text-white' : ''
+                    }`}
+                    style={{
+                      background: settings.llmApiFormat === 'gemini'
+                        ? 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)'
+                        : 'rgba(255, 107, 157, 0.1)',
+                      color: settings.llmApiFormat === 'gemini' ? 'white' : 'var(--color-primary)',
+                    }}
+                  >
+                    Gemini
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
                   API URL
                 </label>
                 <input
                   type="text"
                   className="input-field text-sm"
-                  placeholder="https://api.deepseek.com/v1"
+                  placeholder={settings.llmApiFormat === 'gemini'
+                    ? "https://generativelanguage.googleapis.com"
+                    : "https://api.deepseek.com/v1"}
                   value={settings.llmApiUrl}
                   onChange={(e) => handleChange('llmApiUrl', e.target.value)}
                 />
+                {settings.llmApiFormat === 'gemini' && (
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Gemini 只需填写基础 URL，无需包含模型路径
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
@@ -178,7 +222,7 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
                 <input
                   type="text"
                   className="input-field text-sm"
-                  placeholder="deepseek-chat"
+                  placeholder={settings.llmApiFormat === 'gemini' ? "gemini-2.0-flash" : "deepseek-chat"}
                   value={settings.llmModel}
                   onChange={(e) => handleChange('llmModel', e.target.value)}
                 />

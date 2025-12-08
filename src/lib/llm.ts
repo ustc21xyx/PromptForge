@@ -1,4 +1,5 @@
 import { GenerationMode } from '@/types';
+import { LLMApiFormat } from '@/lib/settings';
 
 const SYSTEM_PROMPTS: Record<GenerationMode, string> = {
   translate: `You are a translator. Translate the user's input into English for Stable Diffusion image generation.
@@ -26,18 +27,16 @@ export interface LLMConfig {
   apiUrl: string;
   apiKey: string;
   model: string;
+  apiFormat: LLMApiFormat;
 }
 
-export async function processPrompt(
+// OpenAI-compatible API call
+async function callOpenAI(
   userPrompt: string,
   mode: GenerationMode,
   config: LLMConfig
 ): Promise<string> {
   const { apiUrl, apiKey, model } = config;
-
-  if (!apiUrl || !apiKey) {
-    throw new Error('LLM API 配置缺失，请在设置中配置');
-  }
 
   const response = await fetch(`${apiUrl}/chat/completions`, {
     method: 'POST',
@@ -63,4 +62,71 @@ export async function processPrompt(
 
   const data = await response.json();
   return data.choices[0]?.message?.content?.trim() || userPrompt;
+}
+
+// Gemini API call
+async function callGemini(
+  userPrompt: string,
+  mode: GenerationMode,
+  config: LLMConfig
+): Promise<string> {
+  const { apiUrl, apiKey, model } = config;
+
+  // Gemini API URL format: baseUrl/v1beta/models/{model}:generateContent?key={apiKey}
+  // Or if user provides full URL, just append the key
+  let url: string;
+  if (apiUrl.includes(':generateContent')) {
+    url = `${apiUrl}?key=${apiKey}`;
+  } else {
+    const baseUrl = apiUrl.replace(/\/+$/, '');
+    const modelName = model || 'gemini-2.0-flash';
+    url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: `${SYSTEM_PROMPTS[mode]}\n\nUser input: ${userPrompt}` }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: mode === 'creative' ? 0.9 : 0.7,
+        maxOutputTokens: 1000,
+      }
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gemini API 错误: ${error}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  return text || userPrompt;
+}
+
+export async function processPrompt(
+  userPrompt: string,
+  mode: GenerationMode,
+  config: LLMConfig
+): Promise<string> {
+  const { apiUrl, apiKey, apiFormat } = config;
+
+  if (!apiUrl || !apiKey) {
+    throw new Error('LLM API 配置缺失，请在设置中配置');
+  }
+
+  if (apiFormat === 'gemini') {
+    return callGemini(userPrompt, mode, config);
+  } else {
+    return callOpenAI(userPrompt, mode, config);
+  }
 }

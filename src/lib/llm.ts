@@ -33,11 +33,12 @@ export interface LLMConfig {
 
 // Build system prompt with optional custom additions
 function buildSystemPrompt(mode: GenerationMode, customPrompt?: string): string {
-  let prompt = SYSTEM_PROMPTS[mode];
+  const basePrompt = SYSTEM_PROMPTS[mode];
   if (customPrompt?.trim()) {
-    prompt += `\n\n${customPrompt.trim()}`;
+    // 自定义提示词放在开头，优先级更高
+    return `${customPrompt.trim()}\n\n${basePrompt}`;
   }
-  return prompt;
+  return basePrompt;
 }
 
 // OpenAI-compatible API call

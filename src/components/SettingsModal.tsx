@@ -227,6 +227,21 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
                   onChange={(e) => handleChange('llmModel', e.target.value)}
                 />
               </div>
+              <div>
+                <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  自定义系统提示词 (可选)
+                </label>
+                <textarea
+                  className="input-field text-sm"
+                  style={{ minHeight: '80px', lineHeight: '1.4' }}
+                  placeholder="添加到所有模式的系统提示词末尾..."
+                  value={settings.customSystemPrompt}
+                  onChange={(e) => handleChange('customSystemPrompt', e.target.value)}
+                />
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  此提示词将附加到翻译/增强/创意三种模式的系统提示词末尾
+                </p>
+              </div>
             </div>
           </section>
 

@@ -28,6 +28,16 @@ export interface LLMConfig {
   apiKey: string;
   model: string;
   apiFormat: LLMApiFormat;
+  customSystemPrompt?: string;
+}
+
+// Build system prompt with optional custom additions
+function buildSystemPrompt(mode: GenerationMode, customPrompt?: string): string {
+  let prompt = SYSTEM_PROMPTS[mode];
+  if (customPrompt?.trim()) {
+    prompt += `\n\n${customPrompt.trim()}`;
+  }
+  return prompt;
 }
 
 // OpenAI-compatible API call
@@ -36,7 +46,8 @@ async function callOpenAI(
   mode: GenerationMode,
   config: LLMConfig
 ): Promise<string> {
-  const { apiUrl, apiKey, model } = config;
+  const { apiUrl, apiKey, model, customSystemPrompt } = config;
+  const systemPrompt = buildSystemPrompt(mode, customSystemPrompt);
 
   const response = await fetch(`${apiUrl}/chat/completions`, {
     method: 'POST',
@@ -47,7 +58,7 @@ async function callOpenAI(
     body: JSON.stringify({
       model: model || 'deepseek-chat',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPTS[mode] },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       temperature: mode === 'creative' ? 0.9 : 0.7,
@@ -70,7 +81,8 @@ async function callGemini(
   mode: GenerationMode,
   config: LLMConfig
 ): Promise<string> {
-  const { apiUrl, apiKey, model } = config;
+  const { apiUrl, apiKey, model, customSystemPrompt } = config;
+  const systemPrompt = buildSystemPrompt(mode, customSystemPrompt);
 
   // Gemini API URL format: baseUrl/v1beta/models/{model}:generateContent?key={apiKey}
   // Or if user provides full URL, just append the key
@@ -92,7 +104,7 @@ async function callGemini(
       contents: [
         {
           parts: [
-            { text: `${SYSTEM_PROMPTS[mode]}\n\nUser input: ${userPrompt}` }
+            { text: `${systemPrompt}\n\nUser input: ${userPrompt}` }
           ]
         }
       ],

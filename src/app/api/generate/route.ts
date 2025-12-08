@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       apiKey: config.llmApiKey,
       model: config.llmModel,
       apiFormat: config.llmApiFormat || 'openai',
+      customSystemPrompt: config.customSystemPrompt,
     });
 
     // Step 2: Submit to ComfyUI

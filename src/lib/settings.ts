@@ -8,6 +8,7 @@ export interface UserSettings {
   llmApiKey: string;
   llmModel: string;
   llmApiFormat: LLMApiFormat;
+  customSystemPrompt: string;  // 自定义系统提示词，三种模式共享
 
   // ComfyUI Configuration
   comfyuiUrl: string;
@@ -82,6 +83,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   llmApiKey: '',
   llmModel: 'deepseek-chat',
   llmApiFormat: 'openai',
+  customSystemPrompt: '',
   comfyuiUrl: '',
   workflowTemplate: DEFAULT_WORKFLOW,
 };

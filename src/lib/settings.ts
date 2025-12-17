@@ -2,17 +2,23 @@
 
 export type LLMApiFormat = 'openai' | 'gemini';
 
+export interface LLMProviderSettings {
+  apiUrl: string;
+  apiKey: string;
+  model: string;
+}
+
 export interface UserSettings {
-  // LLM Configuration
-  llmApiUrl: string;
-  llmApiKey: string;
-  llmModel: string;
+  // Which provider to use
   llmApiFormat: LLMApiFormat;
-  customSystemPrompt: string;  // 自定义系统提示词，三种模式共享
+  // Provider-specific LLM configuration (stored separately)
+  openai: LLMProviderSettings;
+  gemini: LLMProviderSettings;
+  customSystemPrompt: string; // 自定义系统提示词，三种模式共享
 
   // ComfyUI Configuration
   comfyuiUrl: string;
-  workflowTemplate: string;  // JSON string of workflow
+  workflowTemplate: string; // JSON string of workflow
 }
 
 // Generation parameters persistence
@@ -79,10 +85,17 @@ export const DEFAULT_WORKFLOW = `{
 }`;
 
 export const DEFAULT_SETTINGS: UserSettings = {
-  llmApiUrl: 'https://api.deepseek.com/v1',
-  llmApiKey: '',
-  llmModel: 'deepseek-chat',
   llmApiFormat: 'openai',
+  openai: {
+    apiUrl: 'https://api.deepseek.com/v1',
+    apiKey: '',
+    model: 'deepseek-chat',
+  },
+  gemini: {
+    apiUrl: 'https://generativelanguage.googleapis.com',
+    apiKey: '',
+    model: 'gemini-2.0-flash',
+  },
   customSystemPrompt: '',
   comfyuiUrl: '',
   workflowTemplate: DEFAULT_WORKFLOW,
@@ -102,7 +115,47 @@ export function getSettings(): UserSettings {
   try {
     const data = localStorage.getItem(SETTINGS_KEY);
     if (data) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+      const parsed = JSON.parse(data) as Partial<UserSettings> & {
+        llmApiUrl?: string;
+        llmApiKey?: string;
+        llmModel?: string;
+      };
+
+      // Backward-compat migration from legacy flat fields.
+      const migrated: Partial<UserSettings> = { ...parsed };
+      const hasLegacy =
+        typeof parsed.llmApiUrl === 'string' ||
+        typeof parsed.llmApiKey === 'string' ||
+        typeof parsed.llmModel === 'string';
+
+      if (hasLegacy) {
+        const legacyProvider: LLMApiFormat = parsed.llmApiFormat || 'openai';
+        const legacySettings: LLMProviderSettings = {
+          apiUrl: parsed.llmApiUrl || DEFAULT_SETTINGS.openai.apiUrl,
+          apiKey: parsed.llmApiKey || '',
+          model: parsed.llmModel || (legacyProvider === 'gemini' ? DEFAULT_SETTINGS.gemini.model : DEFAULT_SETTINGS.openai.model),
+        };
+
+        migrated.openai =
+          legacyProvider === 'openai'
+            ? legacySettings
+            : (parsed.openai as LLMProviderSettings | undefined) || DEFAULT_SETTINGS.openai;
+        migrated.gemini =
+          legacyProvider === 'gemini'
+            ? legacySettings
+            : (parsed.gemini as LLMProviderSettings | undefined) || DEFAULT_SETTINGS.gemini;
+
+        delete (migrated as Record<string, unknown>).llmApiUrl;
+        delete (migrated as Record<string, unknown>).llmApiKey;
+        delete (migrated as Record<string, unknown>).llmModel;
+      }
+
+      return {
+        ...DEFAULT_SETTINGS,
+        ...migrated,
+        openai: { ...DEFAULT_SETTINGS.openai, ...(migrated.openai || {}) },
+        gemini: { ...DEFAULT_SETTINGS.gemini, ...(migrated.gemini || {}) },
+      };
     }
   } catch {
     // ignore
@@ -145,10 +198,6 @@ export function savePrefs(prefs: GenerationPrefs): void {
 }
 
 export function isSettingsConfigured(settings: UserSettings): boolean {
-  return !!(
-    settings.llmApiUrl &&
-    settings.llmApiKey &&
-    settings.llmModel &&
-    settings.comfyuiUrl
-  );
+  const provider = settings.llmApiFormat === 'gemini' ? settings.gemini : settings.openai;
+  return !!(provider.apiUrl && provider.apiKey && provider.model && settings.comfyuiUrl);
 }

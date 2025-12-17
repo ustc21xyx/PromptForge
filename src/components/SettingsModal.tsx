@@ -12,7 +12,8 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModalProps) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [showOpenAIKey, setShowOpenAIKey] = useState(false);
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -20,6 +21,8 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
     if (isOpen) {
       setSettings(getSettings());
       setImportError(null);
+      setShowOpenAIKey(false);
+      setShowGeminiKey(false);
     }
   }, [isOpen]);
 
@@ -45,6 +48,17 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleProviderChange = (
+    provider: 'openai' | 'gemini',
+    key: 'apiUrl' | 'apiKey' | 'model',
+    value: string
+  ) => {
+    setSettings(prev => ({
+      ...prev,
+      [provider]: { ...prev[provider], [key]: value },
+    }));
+  };
+
   // Export settings as JSON file
   const handleExport = () => {
     const dataStr = JSON.stringify(settings, null, 2);
@@ -66,11 +80,29 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
     reader.onload = (event) => {
       try {
         const imported = JSON.parse(event.target?.result as string);
-        // Validate required fields
-        if (typeof imported.llmApiUrl !== 'string' || typeof imported.comfyuiUrl !== 'string') {
-          throw new Error('配置文件格式不正确');
+        // Support both new and legacy formats.
+        if (typeof imported !== 'object' || imported === null) throw new Error('配置文件格式不正确');
+        if (typeof imported.comfyuiUrl !== 'string') throw new Error('配置文件格式不正确');
+
+        const next: UserSettings = {
+          ...DEFAULT_SETTINGS,
+          ...imported,
+          openai: { ...DEFAULT_SETTINGS.openai, ...(imported.openai || {}) },
+          gemini: { ...DEFAULT_SETTINGS.gemini, ...(imported.gemini || {}) },
+        };
+
+        // Legacy flat fields migration (if present).
+        if (typeof imported.llmApiUrl === 'string' || typeof imported.llmApiKey === 'string' || typeof imported.llmModel === 'string') {
+          const legacyProvider = imported.llmApiFormat === 'gemini' ? 'gemini' : 'openai';
+          const legacySettings = {
+            apiUrl: imported.llmApiUrl || next[legacyProvider].apiUrl,
+            apiKey: imported.llmApiKey || next[legacyProvider].apiKey,
+            model: imported.llmModel || next[legacyProvider].model,
+          };
+          next[legacyProvider] = { ...next[legacyProvider], ...legacySettings };
         }
-        setSettings({ ...DEFAULT_SETTINGS, ...imported });
+
+        setSettings(next);
         setImportError(null);
       } catch {
         setImportError('导入失败：配置文件格式不正确');
@@ -130,7 +162,7 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
             <div className="space-y-3">
               <div>
                 <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                  API 格式
+                  使用的 LLM
                 </label>
                 <div className="flex gap-2">
                   <button
@@ -164,72 +196,172 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
                     Gemini
                   </button>
                 </div>
-                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  当前使用非流式输出（OpenAI 兼容请求体：stream=false）
-                </p>
               </div>
-              <div>
-                <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                  API URL
-                </label>
-                <input
-                  type="text"
-                  className="input-field text-sm"
-                  placeholder={settings.llmApiFormat === 'gemini'
-                    ? "https://generativelanguage.googleapis.com"
-                    : "https://api.deepseek.com/v1"}
-                  value={settings.llmApiUrl}
-                  onChange={(e) => handleChange('llmApiUrl', e.target.value)}
-                />
-                {settings.llmApiFormat === 'gemini' && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                    Gemini 只需填写基础 URL，无需包含模型路径
+
+              {/* OpenAI-compatible */}
+              <details
+                className="rounded-xl p-3"
+                style={{
+                  background: settings.llmApiFormat === 'openai' ? 'rgba(255, 107, 157, 0.08)' : 'rgba(255, 107, 157, 0.04)',
+                  border: settings.llmApiFormat === 'openai' ? '1px solid rgba(255, 107, 157, 0.25)' : '1px solid rgba(0,0,0,0.06)',
+                }}
+                open={settings.llmApiFormat === 'openai'}
+              >
+                <summary
+                  className="text-sm font-medium cursor-pointer flex items-center justify-between"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <span>OpenAI 兼容配置</span>
+                  {settings.llmApiFormat === 'openai' && (
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(255, 107, 157, 0.12)', color: 'var(--color-primary)' }}>
+                      当前使用
+                    </span>
+                  )}
+                </summary>
+                <div className="space-y-3 mt-3">
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    当前使用非流式输出（OpenAI 兼容请求体：stream=false）
                   </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                  API Key
-                </label>
-                <div className="relative">
-                  <input
-                    type={showApiKey ? 'text' : 'password'}
-                    className="input-field text-sm pr-10"
-                    placeholder="sk-..."
-                    value={settings.llmApiKey}
-                    onChange={(e) => handleChange('llmApiKey', e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    {showApiKey ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
-                  </button>
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      API URL
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field text-sm"
+                      placeholder="https://api.deepseek.com/v1"
+                      value={settings.openai.apiUrl}
+                      onChange={(e) => handleProviderChange('openai', 'apiUrl', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      API Key
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showOpenAIKey ? 'text' : 'password'}
+                        className="input-field text-sm pr-10"
+                        placeholder="sk-..."
+                        value={settings.openai.apiKey}
+                        onChange={(e) => handleProviderChange('openai', 'apiKey', e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOpenAIKey(!showOpenAIKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        {showOpenAIKey ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      模型名称
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field text-sm"
+                      placeholder="deepseek-chat"
+                      value={settings.openai.model}
+                      onChange={(e) => handleProviderChange('openai', 'model', e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
-                  模型名称
-                </label>
-                <input
-                  type="text"
-                  className="input-field text-sm"
-                  placeholder={settings.llmApiFormat === 'gemini' ? "gemini-2.0-flash" : "deepseek-chat"}
-                  value={settings.llmModel}
-                  onChange={(e) => handleChange('llmModel', e.target.value)}
-                />
-              </div>
+              </details>
+
+              {/* Gemini */}
+              <details
+                className="rounded-xl p-3"
+                style={{
+                  background: settings.llmApiFormat === 'gemini' ? 'rgba(255, 107, 157, 0.08)' : 'rgba(255, 107, 157, 0.04)',
+                  border: settings.llmApiFormat === 'gemini' ? '1px solid rgba(255, 107, 157, 0.25)' : '1px solid rgba(0,0,0,0.06)',
+                }}
+                open={settings.llmApiFormat === 'gemini'}
+              >
+                <summary
+                  className="text-sm font-medium cursor-pointer flex items-center justify-between"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <span>Gemini 配置</span>
+                  {settings.llmApiFormat === 'gemini' && (
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(255, 107, 157, 0.12)', color: 'var(--color-primary)' }}>
+                      当前使用
+                    </span>
+                  )}
+                </summary>
+                <div className="space-y-3 mt-3">
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      API URL
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field text-sm"
+                      placeholder="https://generativelanguage.googleapis.com"
+                      value={settings.gemini.apiUrl}
+                      onChange={(e) => handleProviderChange('gemini', 'apiUrl', e.target.value)}
+                    />
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Gemini 只需填写基础 URL，无需包含模型路径
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      API Key
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showGeminiKey ? 'text' : 'password'}
+                        className="input-field text-sm pr-10"
+                        placeholder="AIza..."
+                        value={settings.gemini.apiKey}
+                        onChange={(e) => handleProviderChange('gemini', 'apiKey', e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowGeminiKey(!showGeminiKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        {showGeminiKey ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      模型名称
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field text-sm"
+                      placeholder="gemini-2.0-flash"
+                      value={settings.gemini.model}
+                      onChange={(e) => handleProviderChange('gemini', 'model', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </details>
+
               <div>
                 <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
                   自定义系统提示词 (可选)

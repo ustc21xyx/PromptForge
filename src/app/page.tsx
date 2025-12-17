@@ -144,6 +144,8 @@ export default function Home() {
     displayTaskRef.current = historyId;
 
     try {
+      const llmProvider = settings.llmApiFormat === 'gemini' ? settings.gemini : settings.openai;
+
       // Submit generation request with config
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -153,9 +155,9 @@ export default function Home() {
           mode,
           params,
           config: {
-            llmApiUrl: settings.llmApiUrl,
-            llmApiKey: settings.llmApiKey,
-            llmModel: settings.llmModel,
+            llmApiUrl: llmProvider.apiUrl,
+            llmApiKey: llmProvider.apiKey,
+            llmModel: llmProvider.model,
             llmApiFormat: settings.llmApiFormat,
             customSystemPrompt: settings.customSystemPrompt,
             comfyuiUrl: settings.comfyuiUrl,

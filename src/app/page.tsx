@@ -26,8 +26,8 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
 
-  const currentTaskRef = useRef<{ promptId: string; historyId: string } | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const displayTaskRef = useRef<string | null>(null);
+  const pollingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Load settings and history on mount
   useEffect(() => {
@@ -46,54 +46,72 @@ export default function Home() {
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
+      pollingIntervalsRef.current.forEach((interval) => clearInterval(interval));
+      pollingIntervalsRef.current.clear();
     };
   }, []);
 
-  const pollStatus = useCallback(async (promptId: string, historyId: string, comfyuiUrl: string) => {
-    try {
-      const response = await fetch('/api/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt_id: promptId, comfyuiUrl }),
-      });
-      const data: StatusResponse = await response.json();
+  const pollStatus = useCallback(
+    async (promptId: string, historyId: string, comfyuiUrl: string) => {
+      const isDisplayed = displayTaskRef.current === historyId;
 
-      // Check if this is still the current task
-      if (currentTaskRef.current?.promptId !== promptId) {
-        return;
-      }
-
-      setStatus(data.status);
-
-      if (data.status === 'completed' && data.image_url) {
-        setImageUrl(data.image_url);
-        setIsLoading(false);
-        updateHistoryItem(historyId, {
-          status: 'completed',
-          imageUrl: data.image_url,
+      try {
+        const response = await fetch('/api/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt_id: promptId, comfyuiUrl }),
         });
-        refreshHistory();
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
+        const data: StatusResponse = await response.json();
+
+        if (isDisplayed) {
+          setStatus(data.status);
         }
-      } else if (data.status === 'error') {
-        setError(data.error || '生成失败');
-        setIsLoading(false);
+
+        if (data.status === 'completed' && data.image_url) {
+          if (isDisplayed) {
+            setImageUrl(data.image_url);
+            setIsLoading(false);
+          }
+          updateHistoryItem(historyId, {
+            status: 'completed',
+            imageUrl: data.image_url,
+          });
+          refreshHistory();
+          const interval = pollingIntervalsRef.current.get(promptId);
+          if (interval) {
+            clearInterval(interval);
+            pollingIntervalsRef.current.delete(promptId);
+          }
+        } else if (data.status === 'error') {
+          if (isDisplayed) {
+            setError(data.error || '生成失败');
+            setIsLoading(false);
+          }
+          updateHistoryItem(historyId, { status: 'error' });
+          refreshHistory();
+          const interval = pollingIntervalsRef.current.get(promptId);
+          if (interval) {
+            clearInterval(interval);
+            pollingIntervalsRef.current.delete(promptId);
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+        if (isDisplayed) {
+          setError('获取状态失败');
+          setIsLoading(false);
+        }
         updateHistoryItem(historyId, { status: 'error' });
         refreshHistory();
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
+        const interval = pollingIntervalsRef.current.get(promptId);
+        if (interval) {
+          clearInterval(interval);
+          pollingIntervalsRef.current.delete(promptId);
         }
       }
-    } catch (err) {
-      console.error('Polling error:', err);
-    }
-  }, [refreshHistory]);
+    },
+    [refreshHistory]
+  );
 
   const handleSubmit = async (
     prompt: string,
@@ -107,18 +125,12 @@ export default function Home() {
       return;
     }
 
-    // Clear previous state
+    // Clear previous state for the currently displayed task
     setIsLoading(true);
     setStatus('pending');
     setProcessedPrompt('');
     setImageUrl(null);
     setError(null);
-
-    // Stop any existing polling
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
 
     // Create history item
     const historyId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -133,6 +145,7 @@ export default function Home() {
     };
     addToHistory(historyItem);
     refreshHistory();
+    displayTaskRef.current = historyId;
 
     try {
       // Submit generation request with config
@@ -171,16 +184,17 @@ export default function Home() {
       });
       refreshHistory();
 
-      // Store current task info
-      currentTaskRef.current = { promptId: data.prompt_id, historyId };
-
-      // Start polling
-      pollingIntervalRef.current = setInterval(() => {
+      // Start polling for this task
+      const interval = setInterval(() => {
         pollStatus(data.prompt_id, historyId, settings.comfyuiUrl);
       }, 2500);
+      pollingIntervalsRef.current.set(data.prompt_id, interval);
 
       // Initial poll
       pollStatus(data.prompt_id, historyId, settings.comfyuiUrl);
+
+      // Allow new submissions while this image is rendering
+      setIsLoading(false);
     } catch (err) {
       console.error('Submit error:', err);
       setError(err instanceof Error ? err.message : '未知错误');

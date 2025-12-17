@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import GenerationForm from '@/components/GenerationForm';
 import GenerationResult from '@/components/GenerationResult';
 import HistoryPanel from '@/components/HistoryPanel';
+import TaskQueuePanel from '@/components/TaskQueuePanel';
 import SettingsModal from '@/components/SettingsModal';
 import { getHistory, addToHistory, updateHistoryItem } from '@/lib/history';
 import { getSettings, isSettingsConfigured, UserSettings, DEFAULT_SETTINGS } from '@/lib/settings';
@@ -16,7 +17,6 @@ import {
 } from '@/types';
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'error' | null>(null);
   const [processedPrompt, setProcessedPrompt] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -70,7 +70,6 @@ export default function Home() {
         if (data.status === 'completed' && data.image_url) {
           if (isDisplayed) {
             setImageUrl(data.image_url);
-            setIsLoading(false);
           }
           updateHistoryItem(historyId, {
             status: 'completed',
@@ -85,7 +84,6 @@ export default function Home() {
         } else if (data.status === 'error') {
           if (isDisplayed) {
             setError(data.error || '生成失败');
-            setIsLoading(false);
           }
           updateHistoryItem(historyId, { status: 'error' });
           refreshHistory();
@@ -99,7 +97,6 @@ export default function Home() {
         console.error('Polling error:', err);
         if (isDisplayed) {
           setError('获取状态失败');
-          setIsLoading(false);
         }
         updateHistoryItem(historyId, { status: 'error' });
         refreshHistory();
@@ -126,7 +123,6 @@ export default function Home() {
     }
 
     // Clear previous state for the currently displayed task
-    setIsLoading(true);
     setStatus('pending');
     setProcessedPrompt('');
     setImageUrl(null);
@@ -192,14 +188,10 @@ export default function Home() {
 
       // Initial poll
       pollStatus(data.prompt_id, historyId, settings.comfyuiUrl);
-
-      // Allow new submissions while this image is rendering
-      setIsLoading(false);
     } catch (err) {
       console.error('Submit error:', err);
       setError(err instanceof Error ? err.message : '未知错误');
       setStatus('error');
-      setIsLoading(false);
       updateHistoryItem(historyId, { status: 'error' });
       refreshHistory();
     }
@@ -320,10 +312,15 @@ export default function Home() {
               <div className="glass-card-static p-5">
                 <GenerationForm
                   onSubmit={handleSubmit}
-                  isLoading={isLoading}
                   comfyuiUrl={settings.comfyuiUrl}
                 />
               </div>
+
+              <TaskQueuePanel
+                history={history}
+                onHistoryChange={refreshHistory}
+                onSelectItem={handleSelectHistoryItem}
+              />
 
               {/* Processed Prompt - Collapsible */}
               {processedPrompt && (

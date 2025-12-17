@@ -20,7 +20,7 @@ export function buildWorkflow(templateJson: string, params: WorkflowParams): obj
   const actualSeed = seed === -1 ? Math.floor(Math.random() * 1e15) : seed;
 
   // Replace placeholders in template
-  let workflowStr = templateJson
+  const workflowStr = templateJson
     .replace('"%prompt%"', JSON.stringify(prompt))
     .replace('"%negative_prompt%"', JSON.stringify(negativePrompt))
     .replace('"%seed%"', String(actualSeed))

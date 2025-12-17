@@ -62,6 +62,8 @@ async function callOpenAI(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
+      // Explicitly disable streaming (this project currently consumes non-stream responses).
+      stream: false,
       temperature: mode === 'creative' ? 0.9 : 0.7,
       max_tokens: 1000,
     }),

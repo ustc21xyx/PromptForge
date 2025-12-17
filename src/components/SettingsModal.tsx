@@ -164,6 +164,9 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
                     Gemini
                   </button>
                 </div>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  当前使用非流式输出（OpenAI 兼容请求体：stream=false）
+                </p>
               </div>
               <div>
                 <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
